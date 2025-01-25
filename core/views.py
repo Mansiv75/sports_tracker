@@ -6,7 +6,7 @@ from .serializers import UserSerializer, MatchSerializer
 from .models import Match
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-
+from core.utils import update_leaderboard
 class RegisterView(APIView):
     def post(self, request):
         serializer=UserSerializer(data=request.data)
@@ -52,3 +52,29 @@ class MatchScoreUpdateView(APIView):
             return Response(serializer.data)
         except Match.DoesNotExist:
             return Response({"error":"Match not found"},status=status.HTTP_404_NOT_FOUND)
+
+class MatchCompleteView(APIView):
+    def post(self, request, pk):
+        try:
+            match=Match.objects.get(pk=pk)
+            match.is_completed=True
+            match.save()
+
+            if match.score_team1> match.score_team2:
+                update_leaderboard(match.team1, 3)
+                update_leaderboard(match.team2, 0)
+            elif match.score_team1<match.score_team2:
+                update_leaderboard(match.team1, 0)
+                update_leaderboard(match.team2, 3)
+            else:
+                update_leaderboard(match.team1, 1)
+                update_leaderboard(match.team2, 1)
+            return Response({"message":"Match completed, Leaderboard updated successfully"})
+        
+        except Match.DoesNotExist:
+            return Response({"error":"Match not found"},status=status.HTTP_404_NOT_FOUND)
+
+class LeaderboardView(APIView):
+    def get(self, request):
+        top_teams=get_top_teams()
+        return Response(top_teams)
