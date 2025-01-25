@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'core',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -134,4 +135,15 @@ REST_FRAMEWORK={
         'rest_framework.permissions.IsAuthenticated',
     ],
     
+}
+
+ASGI_APPLICATION = 'sports_tracker.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],
+        },
+    },
 }
