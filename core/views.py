@@ -7,7 +7,11 @@ from .models import Match
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from core.utils import update_leaderboard
+from rest_framework.permissions import IsAuthenticated
 class RegisterView(APIView):
+    authentication_classes = []  # Disable authentication for this view
+    permission_classes = []      # Allow all users to access this view
+
     def post(self, request):
         serializer=UserSerializer(data=request.data)
         if serializer.is_valid():
@@ -26,6 +30,7 @@ class MatchCreateView(APIView):
     
 # Get all matches
 class MatchListView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         matches=Match.objects.all()
         serializer=MatchSerializer(matches, many=True)
