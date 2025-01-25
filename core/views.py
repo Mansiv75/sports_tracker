@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import UserSerializer, MatchSerializer
 from .models import Match
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 class RegisterView(APIView):
     def post(self, request):
@@ -29,4 +31,24 @@ class MatchListView(APIView):
         serializer=MatchSerializer(matches, many=True)
         return Response(serializer.data)
 
+class MatchScoreUpdateView(APIView):
+    def post(self, request, pk):
+        try:
+            match=Match.objects.get(pk=pk)
+            match.score_team1=request.data.get('score_team1', match.score_team1)
+            match.score_team2=request.data.get('score_team2', match.score_team2)
+            match.save()
 
+            channel_layer=get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f"match_{pk}",
+                {
+                    "type": "score_update",
+                    "score_team1": match.score_team1,
+                    "score_team2": match.score_team2,
+                }
+            )
+            serializer=MatchSerializer(match)
+            return Response(serializer.data)
+        except Match.DoesNotExist:
+            return Response({"error":"Match not found"},status=status.HTTP_404_NOT_FOUND)
